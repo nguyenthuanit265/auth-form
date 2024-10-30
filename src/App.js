@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import {useState} from 'react';
 import {BrowserRouter, Routes, Route, Link, Navigate, useNavigate} from 'react-router-dom';
 import axios from 'axios';
@@ -25,8 +25,19 @@ const AuthForm = () => (
 
 const HomePage = () => {
     const navigate = useNavigate();
-    const email = localStorage.getItem('email');
-    const accessToken = localStorage.getItem('accessToken');
+    const [userData, setUserData] = useState(null);
+
+    useEffect(() => {
+        const email = localStorage.getItem('email');
+        const accessToken = localStorage.getItem('accessToken');
+        if (email) {
+            setUserData(email);
+        }
+    }, []);
+
+    if (!userData) {
+        return <Navigate to="/login"/>;
+    }
 
     const handleLogout = () => {
         localStorage.removeItem('email');
@@ -107,7 +118,7 @@ const Login = () => {
             if (response.data) {
                 setSuccess('Login successful!');
                 console.log(response.data);
-                localStorage.setItem('email', response.data?.data?.email);
+                localStorage.setItem('email', formData.email);
                 localStorage.setItem('accessToken', response.data?.data?.accessToken);
                 setFormData({email: '', password: ''});
                 setTimeout(() => {
