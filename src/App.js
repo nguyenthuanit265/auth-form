@@ -106,6 +106,7 @@ const Login = () => {
 
             if (response.data) {
                 setSuccess('Login successful!');
+                console.log(response.data);
                 localStorage.setItem('email', response.data?.data?.email);
                 localStorage.setItem('accessToken', response.data?.data?.accessToken);
                 setFormData({email: '', password: ''});
