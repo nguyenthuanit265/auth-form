@@ -1,7 +1,6 @@
 import React, {useEffect} from 'react';
 import {useState} from 'react';
 import {BrowserRouter, Routes, Route, Link, Navigate, useNavigate} from 'react-router-dom';
-import axios from 'axios';
 import API_ENDPOINTS from "./api";
 import axiosInstance from "./axios";
 
@@ -23,25 +22,47 @@ const AuthForm = () => (
     </div>
 );
 
-const HomePage = () => {
+const Profile = () => {
     const navigate = useNavigate();
-    const [userData, setUserData] = useState(null);
+    const [userData, setUserData] = useState({});
+    const [error, setError] = useState('');
+
+    const email = localStorage.getItem('email');
+    const accessToken = localStorage.getItem('accessToken');
+    const userId = localStorage.getItem('userId');
 
     useEffect(() => {
-        const email = localStorage.getItem('email');
-        const accessToken = localStorage.getItem('accessToken');
-        if (email) {
-            setUserData(email);
+        if (!accessToken || !userId) {
+            navigate('/login');
+            return;
         }
-    }, []);
 
-    if (!userData) {
-        return <Navigate to="/login"/>;
-    }
+        async function fetchData() {
+            try {
+                const response = await axiosInstance.get(`${API_ENDPOINTS.USER_PROFILE}/${userId}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                });
+
+                if (response.data) {
+                    setUserData(response.data.data);
+                }
+            } catch (err) {
+                setError(err.response?.data?.message || 'Get profile failed. Please try again.');
+            }
+        }
+
+        if (userId && accessToken) {
+            fetchData();
+        }
+    }, [userId, accessToken]);
 
     const handleLogout = () => {
         localStorage.removeItem('email');
         localStorage.removeItem('accessToken');
+        localStorage.removeItem('userId');
         navigate('/login');
     };
 
@@ -50,9 +71,12 @@ const HomePage = () => {
             <nav className="bg-white shadow-lg">
                 <div className="max-w-6xl mx-auto px-4">
                     <div className="flex justify-between items-center h-16">
+                        {error &&
+                            <div
+                                className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4">{error}</div>}
                         <div className="text-xl font-semibold text-gray-800">My Website</div>
                         <div className="flex items-center space-x-4">
-                            <span className="text-gray-600">Welcome, {userData || 'Guest'}</span>
+                            <span className="text-gray-600">Welcome, {userData?.email || 'Guest'}</span>
                             <button
                                 onClick={handleLogout}
                                 className="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded hover:bg-red-600"
@@ -66,7 +90,7 @@ const HomePage = () => {
 
             <main className="max-w-6xl mx-auto mt-10 px-4">
                 <div className="bg-white rounded-lg shadow-md p-8">
-                    <h1 className="text-3xl font-bold text-gray-800 mb-4">Welcome to My Website</h1>
+                    <h1 className="text-3xl font-bold text-gray-800 mb-4">Profile</h1>
                     <p className="text-gray-600">
                         Thank you for joining us! Feel free to explore our features and content.
                     </p>
@@ -120,9 +144,10 @@ const Login = () => {
                 console.log(response.data);
                 localStorage.setItem('email', formData.email);
                 localStorage.setItem('accessToken', response.data?.data?.accessToken);
+                localStorage.setItem('userId', response.data?.data?.id);
                 setFormData({email: '', password: ''});
                 setTimeout(() => {
-                    navigate('/home');
+                    navigate('/profile');
                 }, 1500);
             }
         } catch (err) {
@@ -291,7 +316,7 @@ const App = () => (
     <BrowserRouter>
         <Routes>
             <Route path="/" element={<AuthForm/>}/>
-            <Route path="/home" element={<HomePage/>}/>
+            <Route path="/profile" element={<Profile/>}/>
             <Route path="/login" element={<Login/>}/>
             <Route path="/register" element={<Register/>}/>
             <Route path="*" element={<Navigate to="/"/>}/>
